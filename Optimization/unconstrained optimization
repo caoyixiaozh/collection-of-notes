@@ -1,0 +1,95 @@
+# Unconstrained Optimization
+Unconstrained optimization appears a lot in applications like machine learning when we try to minimize a cost function. They are relatively easier to solve compared to constrained problems, but the algorithms involved are important and can be extended to constrained problems.
+
+Throughout this note, we consider the below formulation of an unconstrained minimization problem:
+
+Let $f: \mathbb{R}^n \to \mathbb{R}$ be a continuous (usually differentiable) function. The associated unconstrained non-linear optimization problem is given by 
+$$\min_{x\in\mathbb{R}^n}\quad f(x)$$
+
+At optimality, denote $z^* = \min f(x)$ and $x^*\in \argmin f(x)$.
+
+## Optimality conditions
+### Local minimum 
+*Local optimum* is bascially when $x^*$ is optimal in a neighborhood of itself. 
+
+If $x^*\in\mathbb{R}^n$ is a local minimum of $f$, then 
+$$\nabla f(x^*) = 0\quad \text{and}\quad \nabla^2 f(x)\succeq 0$$
+
+On the other hand, if
+$$\nabla f(x^*) = 0\quad \text{and}\quad \nabla^2 f(x)\succ 0$$
+then $x^*$ is a local minimum.
+
+These are in fact just the multivariate calculus. For example, wherever the gradient is $0$ is called a *stationary point*, when the Hessian is positive semi-definite, the function is essentially  "curving up", i.e., the gradient is changing from negative to positive, hence that stationary point is a local minimum. We might naturally wonder what happens when the gradient and Hessian are both zero. It turns out that we could be at a saddle point where the gradient does not change sign, and we can't say $x^*$ is a local minimum since in the neighborhood of $x^*$, the function could be just flat.
+
+So far we've only looked at each point $x^*$, and we can derive some conclusions about the small neighborhood around it, i.e., whether $x^*$ is a local minimum. However, we don't know anything yet about the global optimality of the function since we haven't consider any global behavior of the function, the most important one of which is convexity.
+
+### Convexity
+The definition of convexity is for all $x$ and $y$ in the domain of $f$, and with $0\leq p\leq 1$, we have
+$$f(px + (1-p)y)\leq pf(x)+(1-p)f(y)$$
+that is, the function, if convex, evaluated at the weighted average of two points is no greater than the weighted average of the function evaluated at the two points.
+
+However, usually in optimization, we don't use the definition to show a function is convex. Instead, we use the first or second order conditions.
+
+- First order condition: f is convex if and only if
+  $$f(y)\geq f(x) + \nabla f(x)^T(y-x), \forall x, y$$
+  This is saying that if the function is convex, then the first-order Taylor approximation of $f$ near $x$ is a global underestimator of the function.
+
+- Second order condition: if is convex if and only if 
+  $$\nabla^2 f(x) \succeq 0, \forall x$$
+  The Hessian being non-negative means that the derivative is non-decreasing. Geometrically, this means the function has upward curvature at every $x$.
+
+The most important global property of convex functions is that if $f(x)$ is continuously differentiable and convex, then $x^*$ is a global minimum of $f$ if and only if $\nabla f(x^*) = 0$
+
+## Solving unconstrained optimization
+Based on the previous discussions, we conclude that solving unconstrained optimization problems boils down to finding stationary points where $\nabla f(x^*) = 0$.
+
+If the function is convex, then the stationary point is immediately a global minimum. Otherwise, we have no information about the global behavior about the function (the only tool we have so far to make global inferences is convexity!). We only know that:
+- if $\nabla^2f(x^*)\succ 0$, then $x^*$ is local minimum.
+- if $\nabla^2f(x^*)\succeq 0$, then $x^*$ could be a local minimum.
+- if $\nabla^2f(x^*)$ is indefinite, then $x^*$ is not a local minimum.
+
+### Gradient Descent
+The idea of a *descent algorithm* is simple: we want to find a stationary point where the gradient is $0$, so we iteratively move $x^k$ in the direction $d$ such that $\nabla f(x^k)^T d^k < 0$ by setting $x^{k+1} = x^k + \alpha^k d^k$. This intuitively would reduce the function value as long as the step size $\alpha$ is sufficiently small.
+$$f(x^{k+1})\approx f(x^k) + \alpha^k\nabla f(x^k)^Td < f(x^k)$$
+
+Note that descent algorithms guarantees improvement at each iteration (when $\alpha$ is sufficiently small), so things like stochastic gradient descent which does not guarantee this are technically not descent algorithms.
+
+*Gradient descent* chooses the descent direction as simply the opposite of the gradient at the current iteration, that is, $d = -\nabla f(x^k)$, and then updates with $x^{k+1} = x^k + \alpha^k d^k$.
+
+This $d$ is obviously a *valid descent direction* since $\nabla f(x^k)^T d^k  = -||\nabla f(x^k)||^2 < 0$. Gradient descent defines a monotonically decreasing sequence of $f(x)$:
+$$f(x^0) > f(x^1) > ... > f(x^k) > ...$$
+
+However, without more assumptions, it does not guarantee $x^k$ to converge to a stationary point. Convergence also depends on the stepsize $\alpha^k$ that we choose, therefore, we divide the convergence analysis into different cases.
+
+### Gradient descent with constant step size
+There are two assumptions about convergence of GD when using a constant step size: M-smoothness and convexity.
+
+A function $f$ is M-smooth if its gradient is M-Lipschitz continuous:
+$$||\nabla f(x) - \nabla f(y)||\leq M||x - y||, \forall x, y$$
+that is, the distance between the gradient of $f$ at two points is bounded by the distance between the two points multiplied by a factor of $M$. This ensures that the gradient doesn't change too much when we move from one point to another.
+
+The theorem states that if $f$ is M-smooth and convex, then a gradient descent algorithm with fixed step size $\alpha \leq 1/M$ converges in $O(1/k)$ to a global minimum.
+$$f(x^k) - z^* \leq \frac{1}{2\alpha k}||x^0 - x^*||^2, \forall k\geq 0$$
+
+This means that it would take at most 
+$$\frac{||x^0 - x^*||}{2\alpha \epsilon } \quad \text{iterations}$$
+to arrive at a value that is within the $\epsilon$-ball of the optimal value. 
+
+This shows that gradient descent with constant step size, under the assumption of M-smoothness and convexity, has sublinear convergence:
+$$\lim_{k\to\infty}\frac{|f(x^{k+1})-z^*|}{|f(x^k)-z^*|} = 1$$
+and convergence in limited number of iterations depends on the initial point $x^0$ (how far it is from the optimal value $x^*$) and the step size.
+
+### Gradient descent with exact line search
+In exact line search, at each iteration $k$, we choose a step size $\alpha^k$ to maximize the one-step improvement:
+$$\alpha^k \in \argmin f(x^k + \alpha^k d^k)$$
+
+This implies that exact line search comes at a computational cost at each iteration. With the additional assumption of strong convexity, we can achieve faster convergence with exact line search.
+
+A function $f$ is $m$-strongly convex if $f(x) - \frac{m}{2}||x||^2$
+is convex.
+
+If $f$ is M-smooth and $m$-strongly convex, then the gradient descent algorithm with exact line search converges in $O(c^k)$, with $c = 1 - m/M$:
+$$f(x^k) - z^* \leq c^k(f(x^0)-z^*), \forall k\geq 0$$
+
+This is linear convergence since $0 < c^k < 1$. The solution goes within $\epsilon$ of the optimum after at most
+$$\frac{\log(f(x^0)-z^*)-\log(\epsilon)}{\log(1/c)}\quad \text{iterations}$$

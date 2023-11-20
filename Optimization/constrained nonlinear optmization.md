@@ -10,7 +10,7 @@ $$
 
 If $f(x)$ and $g_i(x)$ are convex, and $h_i(x)$ are linear, then $\mathcal{P}$ is a convex optimization problem. Linear optimization is a special case of convex optimization, where $f(x)$ and $g_i(x)$ are linear.
 
-In general, we believe that an unconstrained optimization problem is much easier to solve than than constrained (see Unconstrained Non-Linear Optimization). To transform a constrained problem to unconstrained, the most direct way is to penalize the breach of constraints with infinite cost.
+In general, we believe that an unconstrained optimization problem is much easier to solve than than constrained (see Unconstrained Non-Linear Optimization). To transform a constrained problem to unconstrained, the most direct way is to penalize the violation of constraints with infinite cost.
 
 Consider the example:
 $$
@@ -30,7 +30,7 @@ $$\chi(x) = \begin{cases}
 \end{cases}
 $$
 
-The problem with this transformation is that $\chi$ is discontinuous, while our algorithms to solve unconstrained problems such as gradient descent and Newton's method rely on differentiating the objective function. Therefore, we need to come up with ways to approximate the function $\chi$: 1) a linear approximation, which leads to the Lagrangian 2) a non-linear approximation, which leads to the barrier function.
+The problem with this transformation is that $\chi$ is discontinuous, while our algorithms to solve unconstrained problems such as gradient descent and Newton's method rely on differentiating the objective function. Therefore, we need to come up with ways to approximate the function $\chi$: 1. a linear approximation, which leads to the Lagrangian dual problem; 2. a non-linear approximation, which leads to the interior point method.
 
 ## Lagrangian Duality
 
@@ -83,20 +83,24 @@ For constrained optimization, we usually have to distinguish between two cases: 
 - $\lambda^* = 0$ corresponds to the case when we have the shallow price being $0$, meaning that the optimal solution is within the constraint. So we can just find the global optimal to the objective function directly (essentially ignoring the constraint).
 - $\lambda^* > 0$ corresponds to a positive shallow price. In this case, we can solve the system of complementary slackness condition (since we now know that $g_i(x) = 0$ for constraints that have a positive shallow price) for the optimal $x^*$.
 
+**KKT are necessary but not sufficient conditions for optimality**:
+- when the function is convex and Slater's condition holds (there's a strict interior solution), then strong duality holds, and KKT conditions $\iff$ optimality
+- when the function is non-convex, but strong duality holds, then $x$ does not satisfy KKT conditions implies that $x$ is not optimal; if $x$ satisfies KKT conditions, then it might be optimal
+
 ## Interior Point Method
 Interior point methods are designed to solve the KKT conditions more systematically and much faster. In particular, it solves perturbed KKT conditions with a parameter $t$. Let's denote the solution to the original KKT conditions as $x^*$, and the solution to the perturbed KKT conditions as $x(t)$, then the perturbed KKT conditions have exactly the same formulation as the original, except for the complementary slackness condition, we write:
 $$ \lambda_i g_i(x) = -t$$
 It's clear that $x(t)$ goes to $x^*$ when $t$ goes to $0$. This actually makes the KKT conditions much easier to solve, since now we can write:
 $$\lambda_i = \frac{-t}{g_i(x)}$$
 When we plug this into the vanishing gradient condition, it becomes:
-$$\nabla f(x) + \sum_{i=1}^m\frac{-t}{g_i(x)}\nabla g_i(x) = \nabla(f(x)-t\sum_{i=1}^m\log(-g_i(x)))$$
+$$\nabla f(x) + \sum_{i=1}^m\frac{-t}{g_i(x)}\nabla g_i(x) = \nabla(f(x)-t\sum_{i=1}^m\log(-g_i(x))) = 0$$
 
 At this point, we have reduced the problem to 
 $$\min_{x\in\mathbb{R}^n} \quad f(x) - t\sum_{i=1}^m\log(-g_i(x))$$
-which is a unconstrained optimization that can be solved by Newton's Method. This is sometimes called the barrier problem. Even if we have equality constraints, we can conviniently add them to this problem and still solve it much easier. Notice that all KKT conditions are satisfied by the new optimization problem, except for the complementary slackness, which is approximated by $t=0$.
+which is a unconstrained optimization that can be solved by Newton's Method. This is sometimes called the barrier problem. Even if we have equality constraints, we can conviniently add them to this problem and still solve it much easier. Notice that all KKT conditions are satisfied by the new optimization problem, except for the complementary slackness, which is approximated by $t\to 0$.
 
 ### The Barrier algorithm
-The barrier problem with linear constraints can be written as:
+The barrier problem with linear equality constraints can be written as:
 $$\min_{x\in\mathbb{R}^n}\quad f(x)-t\sum_{i=1}^n\log(-g_i(x)) \\ \text{s.t } Ax = b$$
 
 The intuition is that if we start at $t$ very large, then the log term dominates, and the minimization problem becomes minimizing $g_i(x)$ such that $Ax = b$, the solution to this problem $\bar{x}$ is called the *analytic center* of the feasible region. So when $t$ is large, our initial point of $\bar{x}$ is usually close to the analytic center.
@@ -105,10 +109,10 @@ We have a solution $x(t)$ to the barrier problem for every fixed $t$. We can try
 
 - Intialization. We start at the interior point $x^S\in \mathbb{R}^n$, set iteration counter $k = 0$ and tolerance $\epsilon>0$, $t_0>0, 0<\rho<1$.
 - Optimization. Update iteration counter from $k$ to $k+1$, solve the barrier problem using Newton's method for linearly constrained optimization starting in $x^S$, store the optimal solution in $x(t_k)$.
-- Termination. If $mt_k\leq \epsilon$, stop, otherwise proceed.
-- Iteration. Update $t_{k+1}\leftarrow t_k$ and $x^S\leftarrow x(t_k)$, and return to step 2.
+- Termination. If $m t_k\leq \epsilon$, stop, otherwise proceed.
+- Iteration. Update $t_{k+1}\leftarrow \rho t_k$ and $x^S\leftarrow x(t_k)$, and return to step 2.
 
-From this process, we obtain a sequence of optimal solutions $x(t_0), x_(t_1),...$, as $0 < t_{k+1} < t_k$ and $t_k\to 0$, the *central path* is defined as the sequence of $x$:
+From this process, we obtain a sequence of optimal solutions $x(t_0), x(t_1),...$, as $0 < t_{k+1} < t_k$ and $t_k\to 0$, the *central path* is defined as the sequence of $x$:
 $$x(t_k)\in \argmin \{f(x) - t_k\sum_{i=1}^m\log(-g_i(x))\}$$
 
 Geometrically, the central path moves from the analytic center of the feasible region to the boundary (theoretically it's never on the boundary since $t_k$ is never exactly $0$).
